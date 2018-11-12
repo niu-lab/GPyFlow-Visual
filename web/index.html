@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Data Flow Diagram</title>
+    <meta charset="UTF-8">
+
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+
+
+    <!-- jQuery-->
+    <script src="js/jquery-3.3.1.js"></script>
+    <!-- Boostrap -->
+    <script src="js/bootstrap.min.js"></script>
+
+    <!--GoJS-->
+    <script src="js/go.js"></script>
+    <!--tabullet-->
+    <script src="js/tabullet.js"></script>
+
+    <!--FileSave-->
+    <script src="js/FileSaver.js"></script>
+
+    <!--MyJS-->
+    <script src="js/dataflow.js"></script>
+
+
+</head>
+<body onload="init()">
+
+<nav class="navbar navbar-default">
+    <div class="container-fluid">
+        <!--<div class="navbar-header">-->
+        <!--<a class="navbar-brand" href="#">Flow Web</a>-->
+        <!--</div>-->
+        <div>
+            <ul class="nav navbar-nav">
+                <button id="export" onclick="exportWorkflow()" type="button" class="btn btn-default navbar-btn">Export
+                </button>
+                <button id="import" type="button" class="btn btn-default navbar-btn">Import</button>
+                <input type="file" id="upload-workflow" style="display: none"/>
+            </ul>
+
+            <ul class="nav navbar-nav navbar-right">
+                <button id="help" type="button" class="btn btn-default navbar-btn" data-toggle="modal"
+                        data-target="#help-modal"><span
+                        class="glyphicon-class glyphicon glyphicon-question-sign"></span>
+                </button>
+            </ul>
+        </div>
+    </div><!-- /.container-fluid -->
+</nav>
+
+<div>
+    <div class="panel panel-success">
+        <div class="panel-heading">
+            <h3 class="panel-title">Flow Graph</h3>
+        </div>
+        <div class="panel-body">
+            <div id="myDiagramDiv"></div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
+<!-- Modal Step Editor -->
+<div class="modal fade" id="edit" tabindex="-1" role="dialog" aria-labelledby="edit">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                        aria-hidden="true">&times;</span>
+                </button>
+                <h4 id="title" class="modal-title">Edit Step</h4>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <span class="input-group-addon">StepName</span>
+                    <input id="step-name" type="text" class="form-control monospace" placeholder="step name">
+                </div>
+                <div class="input-group">
+                    <span class="input-group-addon">CommandLine</span>
+                    <textarea id="step-command" class="form-control monospace" rows="10"
+                              placeholder="command line"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveStep()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Macros -->
+<div class="modal fade" id="macros-modal" tabindex="-1" role="dialog" aria-labelledby="macros">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                        aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">Macros</h4>
+            </div>
+            <div class="modal-body">
+                <div id="macros">
+                    <table class="table table-hover" id="table">
+                        <thead>
+                        <tr data-tabullet-map="id">
+                            <th width="50" data-tabullet-map="_index" data-tabullet-readonly="true">No</th>
+                            <th data-tabullet-map="name">MacroName</th>
+                            <!--<th data-tabullet-map="value">MacroValue</th>-->
+                            <th width="50" data-tabullet-type="edit"></th>
+                            <th width="50" data-tabullet-type="delete"></th>
+                        </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!--help-->
+
+<div class="modal fade" id="help-modal" tabindex="-1" role="dialog" aria-labelledby="help">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                        aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">Help</h4>
+            </div>
+            <div class="modal-body">
+                <h4>1.Right Click to New Step,Show Macros and Clear Canvas</h4>
+                <div class="text-center">
+                    <img width="300" height="200" src="img/1.png"/>
+                </div>
+                <p>
+                    New Step to add a new step in workflow<br>
+                    Macros to show macros in workflow<br>
+                    Clear to clear canvas and macros<br>
+                </p>
+                <h4>2.Enter Step Name and Command Lines</h4>
+                <div class="text-center">
+                    <img width="300" height="200" src="img/2.png"/>
+                </div>
+                <p>
+                    StepName can only be composed of lowercase letters, numbers and underscores.<br>
+                    Command lines to be run in this step are in CommandLine edit box which use <> to indicate the
+                    inputs of the step and [] to indicate the outputs.<br>
+                </p>
+                <h4>3.Macros</h4>
+                <div class="text-center">
+                    <img width="300" height="200" src="img/3.png"/>
+                </div>
+                <p>
+                    #MACRO# field is used to define a macro which can only be compose of uppercase letters, numbers and
+                    underscores.
+                </p>
+                <h4>4.Export/Inport</h4>
+                <p>
+                    Export: save the edited workflow to a JSON file and submit it to GPyFlow to
+                    run.<br>
+                    Import: import the JSON file to redraw a workflow.<br>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+
+    var source = [];
+
+    function checkMacroName(data) {
+        if (data === undefined) {
+            return false;
+        }
+        if (data.name === undefined) {
+            return false;
+        }
+        if (data.name === "") {
+            alert("macro name can't be empty");
+            return false;
+        }
+        var regex = new RegExp("([A-Z][A-Z_0-9]*)");
+        var match = regex.exec(data.name);
+        if (!match) {
+            alert("macro name can only consist of A-Z,0-9,_ and start with capital and underscores");
+            return false;
+        } else {
+            if (!(match[1] === data.name)) {
+                alert("macro name can only consist of A-Z,0-9,_ and start with capital and underscores");
+                return false;
+            }
+        }
+
+        console.log(source);
+        console.log(data);
+
+        for (var i = 0; i < source.length; ++i) {
+            if (source[i].name === data.name) {
+                alert("macro name has exists.");
+                return false;
+            }
+        }
+        return true;
+    }
+
+
+    function resetTabullet() {
+        $("#table").tabullet({
+            data: source,
+            action: function (mode, data) {
+                console.dir(mode);
+                if (mode === 'save') {
+                    if (checkMacroName(data)) {
+                        source.push(data);
+                    }
+                }
+                if (mode === 'delete') {
+                    console.log(data);
+                    for (var i = 0; i < source.length; i++) {
+                        console.log(source[i].id);
+                        if (source[i].id == data) {
+                            source.splice(i, 1);
+                            break;
+                        }
+                    }
+                }
+                resetTabullet();
+            }
+        });
+    }
+
+    function exportWorkflow() {
+        var mymacros = {};
+
+        for (var i = 0; i < source.length; ++i) {
+            console.log(source[i]);
+            mymacros[source[i].name] = source[i].value;
+        }
+        var toDownload = {
+            "workflow": generate(myDiagram.model.nodeDataArray, myDiagram.model.linkDataArray),
+            "macros": mymacros,
+        };
+        console.log(toDownload);
+        var jsonString = JSON.stringify(toDownload);
+        console.log(jsonString);
+        download(jsonString);
+    }
+
+    function download(data) {
+        var blob = new Blob([data], {type: "text/plain;charset=utf-8"});
+        saveAs(blob, "flow.json");
+    }
+
+    $("#import").bind("click", function () {
+        document.getElementById("upload-workflow").click()
+    });
+
+    function isEmpty(obj) {
+        return (typeof obj === "undefined" || obj === null || obj === "");
+    }
+
+    $("#upload-workflow").change(function () {
+        // 获取文件名
+        var file = $(this)[0].files[0];
+        if (isEmpty(file)) {
+            return;
+        }
+        // console.log(file);
+        // console.log(file.name);
+        // 添加元素
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            var contents = e.target.result;
+            // console.log(contents);
+            var data = JSON.parse(contents);
+            rebuild(data.workflow);
+            source = [];
+            var id = 0;
+            for (var name in data.macros) {
+                var item = {};
+                item.id = id;
+                item.name = name;
+                item.value = data.macros[name];
+                source.push(item);
+                id += 1;
+            }
+            resetTabullet();
+            console.log(source);
+        };
+        reader.readAsText(file);
+    });
+
+    function setFlowGraph() {
+        var winWidth = document.documentElement.clientWidth || document.body.clientWidth;
+        var winHeight = document.documentElement.clientHeight || document.body.clientHeight;
+        winWidth = winWidth - 30;
+        winHeight = winHeight - 150;
+        $("#myDiagramDiv").width(winWidth);
+        $("#myDiagramDiv").height(winHeight);
+    }
+
+    $(function () {
+        setFlowGraph();
+        resetTabullet();
+    });
+
+
+</script>
