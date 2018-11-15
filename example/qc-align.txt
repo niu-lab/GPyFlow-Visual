@@ -1,5 +1,0 @@
-qc
-fastp -i <#R1#> -I <#R2#> -o [#R1#.clean.fastq] -O [#R2#.clean.fastq]
-
-align
-bwa mem -t #THREAD# -M -R #RG# #REF# <IN1> <IN2> -o [#OUT#]

@@ -1,0 +1,175 @@
+{
+    "workflow": {
+        "nodes": [
+            {
+                "name": "qc",
+                "cmd": "fastp -i <#R1#> -I <#R2#> -o [#R1#.clean.fq] -O [#R2#.clean.fq]"
+            },
+            {
+                "name": "bwa",
+                "cmd": "bwa mem -t #THREAD# -M -R #RG# #REF# <R1_IN> <R2_IN> -o [#SAMPLE#.bwa.sam]"
+            },
+            {
+                "name": "sam_to_bam",
+                "cmd": "samtools view -bS <#SAMPLE#.bwa.sam> -o [#SAMPLE#.bwa.bam]"
+            },
+            {
+                "name": "sort_sam",
+                "cmd": "java -jar #PICARD# SortSam INPUT=<#SAMPLE#.bwa.bam> OUTPUT=[#SAMPLE#.sort.bam] SORT_ORDER=coordinate"
+            },
+            {
+                "name": "fastq_to_sam",
+                "cmd": "java -jar #PICARD# FastqToSam F1=<R1_IN> F2=<R2_IN> OUTPUT=[#SAMPLE#.raw.bam] RG=#SAMPLE# SM=#SAMPLE# LB=#SAMPLE# PL=ILLUMINA  SORT_ORDER=queryname"
+            },
+            {
+                "name": "merge_bam",
+                "cmd": "java -jar #PICARD# MergeBamAlignment ALIGNED_BAM=<#SAMPLE#.sort.bam> UNMAPPED_BAM=<#SAMPLE#.raw.bam> OUTPUT=[#SAMPLE#.merged.bam] REFERENCE_SEQUENCE=#REF# SORT_ORDER=coordinate ADD_MATE_CIGAR=true CLIP_ADAPTERS=false CLIP_OVERLAPPING_READS=true INCLUDE_SECONDARY_ALIGNMENTS=true MAX_INSERTIONS_OR_DELETIONS=-1 PRIMARY_ALIGNMENT_STRATEGY=MostDistant ATTRIBUTES_TO_RETAIN=XS PAIRED_RUN=true"
+            },
+            {
+                "name": "realigner",
+                "cmd": "java -jar #GATK3# -T RealignerTargetCreator -R #REF# -I <#SAMPLE#.dedupped.bam> -o [#SAMPLE#.realigner.intervals] -known #KNOWN_VCF1# -known #KNOWN_VCF2#"
+            },
+            {
+                "name": "baserecalibrate",
+                "cmd": "#GATK4# BaseRecalibrator -R #REF# -I <#SAMPLE#.indelrealigned.bam> -O [#SAMPLE#.baserecal.grp] --known-sites #KNOWN_SITE1# --known-sites #KNOWN_SITE2# --known-sites #KNOWN_SITE3#"
+            },
+            {
+                "name": "mark_deduplicate",
+                "cmd": "java -Djava.io.tmpdir=#TMP# -jar #PICARD# MarkDuplicates INPUT=<#SAMPLE#.merged.bam> OUTPUT=[#SAMPLE#.dedupped.bam] METRICS_FILE=#SAMPLE#.dedupped.metrics REMOVE_DUPLICATES=false"
+            },
+            {
+                "name": "deduplicate_index",
+                "cmd": "samtools index -b <#SAMPLE#.dedupped.bam> #SAMPLE#.dedupped.bam.bai"
+            },
+            {
+                "name": "indel_realign",
+                "cmd": "java -jar #GATK3# -T IndelRealigner -R #REF# -I <#SAMPLE#.dedupped.bam> -targetIntervals <#SAMPLE#.realigner.intervals> -o [#SAMPLE#.indelrealigned.bam] -known #KNOWN_VCF1# -known #KNOWN_VCF2#"
+            },
+            {
+                "name": "apply_bqsr",
+                "cmd": "#GATK4# ApplyBQSR -R #REF# -I <#SAMPLE#.indelrealigned.bam> --bqsr-recal-file <#SAMPLE#.baserecal.grp> -O [#SAMPLE#.bam]"
+            }
+        ],
+        "links": [
+            {
+                "from": "Step-bwa",
+                "to": "Step-sam_to_bam",
+                "frompid": "#SAMPLE#.bwa.sam",
+                "topid": "#SAMPLE#.bwa.sam"
+            },
+            {
+                "from": "Step-qc",
+                "to": "Step-bwa",
+                "frompid": "#R1#.clean.fq",
+                "topid": "R1_IN"
+            },
+            {
+                "from": "Step-qc",
+                "to": "Step-bwa",
+                "frompid": "#R2#.clean.fq",
+                "topid": "R2_IN"
+            },
+            {
+                "from": "Step-sam_to_bam",
+                "to": "Step-sort_sam",
+                "frompid": "#SAMPLE#.bwa.bam",
+                "topid": "#SAMPLE#.bwa.bam"
+            },
+            {
+                "from": "Step-qc",
+                "to": "Step-fastq_to_sam",
+                "frompid": "#R1#.clean.fq",
+                "topid": "R1_IN"
+            },
+            {
+                "from": "Step-qc",
+                "to": "Step-fastq_to_sam",
+                "frompid": "#R2#.clean.fq",
+                "topid": "R2_IN"
+            },
+            {
+                "from": "Step-fastq_to_sam",
+                "to": "Step-merge_bam",
+                "frompid": "#SAMPLE#.raw.bam",
+                "topid": "#SAMPLE#.raw.bam"
+            },
+            {
+                "from": "Step-sort_sam",
+                "to": "Step-merge_bam",
+                "frompid": "#SAMPLE#.sort.bam",
+                "topid": "#SAMPLE#.sort.bam"
+            },
+            {
+                "from": "Step-merge_bam",
+                "to": "Step-mark_deduplicate",
+                "frompid": "#SAMPLE#.merged.bam",
+                "topid": "#SAMPLE#.merged.bam"
+            },
+            {
+                "from": "Step-mark_deduplicate",
+                "to": "Step-realigner",
+                "frompid": "#SAMPLE#.dedupped.bam",
+                "topid": "#SAMPLE#.dedupped.bam"
+            },
+            {
+                "from": "Step-mark_deduplicate",
+                "to": "Step-deduplicate_index",
+                "frompid": "#SAMPLE#.dedupped.bam",
+                "topid": "#SAMPLE#.dedupped.bam"
+            },
+            {
+                "from": "Step-deduplicate_index",
+                "to": "Step-realigner",
+                "frompid": "Step-deduplicate_index",
+                "topid": "Step-realigner"
+            },
+            {
+                "from": "Step-realigner",
+                "to": "Step-indel_realign",
+                "frompid": "#SAMPLE#.realigner.intervals",
+                "topid": "#SAMPLE#.realigner.intervals"
+            },
+            {
+                "from": "Step-mark_deduplicate",
+                "to": "Step-indel_realign",
+                "frompid": "#SAMPLE#.dedupped.bam",
+                "topid": "#SAMPLE#.dedupped.bam"
+            },
+            {
+                "from": "Step-indel_realign",
+                "to": "Step-baserecalibrate",
+                "frompid": "#SAMPLE#.indelrealigned.bam",
+                "topid": "#SAMPLE#.indelrealigned.bam"
+            },
+            {
+                "from": "Step-baserecalibrate",
+                "to": "Step-apply_bqsr",
+                "frompid": "#SAMPLE#.baserecal.grp",
+                "topid": "#SAMPLE#.baserecal.grp"
+            },
+            {
+                "from": "Step-indel_realign",
+                "to": "Step-apply_bqsr",
+                "frompid": "#SAMPLE#.indelrealigned.bam",
+                "topid": "#SAMPLE#.indelrealigned.bam"
+            }
+        ]
+    },
+    "macros": {
+        "R1": "",
+        "R2": "",
+        "THREAD": "",
+        "RG": "",
+        "PICARD": "",
+        "SAMPLE": "",
+        "REF": "",
+        "TMP": "",
+        "GATK3": "",
+        "KNOWN_VCF1": "",
+        "KNOWN_VCF2": "",
+        "GATK4": "",
+        "KNOWN_SITE1": "",
+        "KNOWN_SITE2": "",
+        "KNOWN_SITE3": ""
+    }
+}

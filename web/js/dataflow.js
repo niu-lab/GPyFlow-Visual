@@ -54,13 +54,13 @@ function init() {
                         $("#macros-modal").modal("show");
                     }
                 }),
-            // GOJS("ContextMenuButton",
-            //     GOJS(go.TextBlock, "Layout"),
-            //     {
-            //         click: function (e, obj) {
-            //             layout();
-            //         }
-            //     }),
+            GOJS("ContextMenuButton",
+                GOJS(go.TextBlock, "Layout"),
+                {
+                    click: function (e, obj) {
+                        layout();
+                    }
+                }),
             GOJS("ContextMenuButton",
                 GOJS(go.TextBlock, "Clear"),
                 {
@@ -90,6 +90,16 @@ function init() {
 }
 
 function layout() {
+    var direction = myDiagram.layout.direction;
+    console.log("before:" + direction);
+    if (direction == 0) {
+        myDiagram.layout = GOJS(go.LayeredDigraphLayout,
+            {direction: 90});
+    }
+    if (direction == 90) {
+        myDiagram.layout = GOJS(go.LayeredDigraphLayout,
+            {direction: 0});
+    }
     myDiagram.layoutDiagram(true);
 }
 
