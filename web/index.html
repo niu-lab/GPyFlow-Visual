@@ -11,6 +11,7 @@
 
     <!-- jQuery-->
     <script src="js/jquery-3.3.1.js"></script>
+
     <!-- Boostrap -->
     <script src="js/bootstrap.min.js"></script>
 
@@ -22,6 +23,9 @@
     <!--FileSave-->
     <script src="js/FileSaver.js"></script>
 
+    <!--JSRender-->
+    <script src="js/jsrender.min.js"></script>
+
     <!--MyJS-->
     <script src="js/dataflow.js"></script>
 
@@ -31,9 +35,6 @@
 
 <nav class="navbar navbar-default">
     <div class="container-fluid">
-        <!--<div class="navbar-header">-->
-        <!--<a class="navbar-brand" href="#">Flow Web</a>-->
-        <!--</div>-->
         <div>
             <ul class="nav navbar-nav">
                 <button id="export" onclick="exportWorkflow()" type="button" class="btn btn-default navbar-btn">Export
@@ -54,21 +55,38 @@
                 </button>
             </ul>
         </div>
-    </div><!-- /.container-fluid -->
+    </div>
 </nav>
-
-<div>
-    <div class="panel panel-success">
-        <div class="panel-heading">
-            <h3 class="panel-title">Flow Graph</h3>
-        </div>
-        <div class="panel-body">
-            <div id="myDiagramDiv"></div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-12"></div>
+        <div class="panel panel-success">
+            <div class="panel-heading">
+                <h3 class="panel-title">Flow Graph</h3>
+            </div>
+            <div id="flow-container" class="panel-body">
+                <div id="myDiagramDiv"></div>
+            </div>
         </div>
     </div>
 </div>
+
 </body>
 </html>
+
+<script id="macroTmpl" type="text/x-jsrender">
+    <ul class="list-group">
+        {{for macros}}
+        <li class="list-group-item">{{:}}</li>
+        {{/for}}
+    </ul>
+
+
+
+
+
+
+</script>
 
 <!-- Modal Step Editor -->
 <div class="modal fade" id="edit" tabindex="-1" role="dialog" aria-labelledby="edit">
@@ -99,9 +117,8 @@
     </div>
 </div>
 
-
 <!-- Macros -->
-<div class="modal fade" id="macros-modal" tabindex="-1" role="dialog" aria-labelledby="macros">
+<div class="modal fade" id="macros-list" tabindex="-1" role="dialog" aria-labelledby="macros">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -111,18 +128,7 @@
                 <h4 class="modal-title">Macros</h4>
             </div>
             <div class="modal-body">
-                <div id="macros">
-                    <table class="table table-hover" id="table">
-                        <thead>
-                        <tr data-tabullet-map="id">
-                            <th width="50" data-tabullet-map="_index" data-tabullet-readonly="true">No</th>
-                            <th data-tabullet-map="name">MacroName</th>
-                            <!--<th data-tabullet-map="value">MacroValue</th>-->
-                            <th width="50" data-tabullet-type="edit"></th>
-                            <th width="50" data-tabullet-type="delete"></th>
-                        </tr>
-                        </thead>
-                    </table>
+                <div id="macros-group">
                 </div>
             </div>
         </div>
@@ -185,83 +191,21 @@
 
 <script>
 
-    var source = [];
-
-    function checkMacroName(data) {
-        if (data === undefined) {
-            return false;
-        }
-        if (data.name === undefined) {
-            return false;
-        }
-        if (data.name === "") {
-            alert("macro name can't be empty");
-            return false;
-        }
-        var regex = new RegExp("([A-Z][A-Z_0-9]*)");
-        var match = regex.exec(data.name);
-        if (!match) {
-            alert("macro name can only consist of A-Z,0-9,_ and start with capital and underscores");
-            return false;
-        } else {
-            if (!(match[1] === data.name)) {
-                alert("macro name can only consist of A-Z,0-9,_ and start with capital and underscores");
-                return false;
-            }
-        }
-
-        console.log(source);
-        console.log(data);
-
-        for (var i = 0; i < source.length; ++i) {
-            if (source[i].name === data.name) {
-                alert("macro name has exists.");
-                return false;
-            }
-        }
-        return true;
-    }
-
-
-    function resetTabullet() {
-        $("#table").tabullet({
-            data: source,
-            action: function (mode, data) {
-                console.dir(mode);
-                if (mode === 'save') {
-                    if (checkMacroName(data)) {
-                        source.push(data);
-                    }
-                }
-                if (mode === 'delete') {
-                    console.log(data);
-                    for (var i = 0; i < source.length; i++) {
-                        console.log(source[i].id);
-                        if (source[i].id == data) {
-                            source.splice(i, 1);
-                            break;
-                        }
-                    }
-                }
-                resetTabullet();
-            }
-        });
-    }
+    var macros = [];
 
     function exportWorkflow() {
         var mymacros = {};
 
-        for (var i = 0; i < source.length; ++i) {
-            console.log(source[i]);
-            mymacros[source[i].name] = source[i].value;
+        for (var i = 0; i < macros.length; ++i) {
+            mymacros[macros[i]] = "";
         }
         var toDownload = {
             "workflow": generate(myDiagram.model.nodeDataArray, myDiagram.model.linkDataArray),
             "macros": mymacros,
         };
-        console.log(toDownload);
+        // console.log(toDownload);
         var jsonString = JSON.stringify(toDownload);
-        console.log(jsonString);
+        // console.log(jsonString);
         download(jsonString);
     }
 
@@ -293,39 +237,33 @@
             // console.log(contents);
             var data = JSON.parse(contents);
             rebuild(data.workflow);
-            source = [];
+            macros = [];
             var id = 0;
             for (var name in data.macros) {
-                var item = {};
-                item.id = id;
-                item.name = name;
-                item.value = data.macros[name];
-                source.push(item);
+                macros.push(name);
                 id += 1;
             }
-            resetTabullet();
-            console.log(source);
         };
         reader.readAsText(file);
     });
 
-    function setFlowGraph() {
-        var winWidth = document.documentElement.clientWidth || document.body.clientWidth;
-        var winHeight = document.documentElement.clientHeight || document.body.clientHeight;
-        winWidth = winWidth - 30;
-        winHeight = winHeight - 150;
-        $("#myDiagramDiv").width(winWidth);
-        $("#myDiagramDiv").height(winHeight);
+    function setFlowGraphSize() {
+        var width = $('#flow-container').width();
+        var height = $(window).height() * 0.8;
+        $("#myDiagramDiv").width(width);
+        $("#myDiagramDiv").height(height);
     }
 
+    $(window).resize(function () {
+        setFlowGraphSize();
+    });
+
     $(function () {
-        setFlowGraph();
-        resetTabullet();
+        setFlowGraphSize();
     });
 
     $("#workflows").click(function () {
         window.open("http://niulab.scgrid.cn/Workflows/");
-        // window.location.href = "http://niulab.scgrid.cn/Workflows/";
     })
 
 

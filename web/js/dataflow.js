@@ -10,7 +10,7 @@ function init() {
                 initialContentAlignment: go.Spot.TopLeft,
                 initialAutoScale: go.Diagram.UniformToFill,
                 layout: GOJS(go.LayeredDigraphLayout,
-                    {direction: 0}),
+                    {direction: 90}),
                 "undoManager.isEnabled": true,
                 "allowCopy": false
             }
@@ -51,7 +51,13 @@ function init() {
                 GOJS(go.TextBlock, "Macros"),
                 {
                     click: function (e, obj) {
-                        $("#macros-modal").modal("show");
+                        var macroTemplate = $.templates("#macroTmpl");
+                        var data = {
+                            "macros": macros,
+                        };
+                        var output = macroTemplate.render(data);
+                        $('#macros-group').html(output);
+                        $("#macros-list").modal("show");
                     }
                 }),
             GOJS("ContextMenuButton",
@@ -243,51 +249,41 @@ function clearEdit() {
 function extractInputs(commandline) {
     var inputs = [];
     var re = /<([A-Za-z0-9_./#]+)>/g;
+    var tempR;
     while (tempR = re.exec(commandline)) {
         inputs.push(tempR[1]);
     }
-    // console.log(inputs);
-    // for (var i = 0; i < inputs.length; ++i) {
-    //     extractMacros(inputs[i]);
-    // }
     return inputs;
 }
 
 function extractOutputs(commandline) {
     var outputs = [];
     var re = /\[([A-Za-z0-9_./#]+)\]/g;
+    var tempR;
     while (tempR = re.exec(commandline)) {
         outputs.push(tempR[1]);
     }
-
-    // for (var i = 0; i < outputs.length; ++i) {
-    //     extractMacros(outputs[i]);
-    // }
-
     return outputs;
 }
 
 function findMacro(name) {
-    for (var i = 0; i < source.length; ++i) {
-        if (source[i].name === name) {
+    for (var i = 0; i < macros.length; ++i) {
+        if (macros[i] === name) {
             return i;
         }
     }
     return -1;
 }
 
-function removeMacros(text) {
+function removeMacros(commandLine) {
     var re = /#([A-Z][A-Z0-9_]*)#/g;
     var m;
-
     do {
-        m = re.exec(text);
-        // console.log(m);
+        m = re.exec(commandLine);
         if (m) {
             var index = findMacro(m[1]);
             if (index >= 0) {
-                source.splice(index, 1);
-                resetTabullet();
+                macros.splice(index, 1);
             }
         }
     } while (m);
@@ -296,17 +292,11 @@ function removeMacros(text) {
 function extractMacros(text) {
     var re = /#([A-Z][A-Z0-9_]*)#/g;
     var m;
-
     do {
         m = re.exec(text);
-        // console.log(m);
         if (m) {
             if (findMacro(m[1]) < 0) {
-                var item = {};
-                item.name = m[1];
-                item.value = "";
-                source.push(item);
-                resetTabullet();
+                macros.push(m[1]);
             }
         }
     } while (m);
@@ -482,9 +472,6 @@ function generate(nodes, links) {
         node.name = stepName;
         node.cmd = commandLine;
         workflow["nodes"].push(node);
-        // workflow[stepName] = {};
-        // workflow[stepName].cmd = commandLine;
-        // workflow[stepName].dict = {};
     }
     for (var i = 0; i < links.length; i++) {
         var from = links[i].from;
@@ -497,13 +484,7 @@ function generate(nodes, links) {
         link.to = to;
         link.frompid = frompid;
         link.topid = topid;
-        //
-        // if (workflow[to].pres.indexOf(from) === -1) {
-        //     workflow[to].pres.push(from);
-        // }
         workflow["links"].push(link);
-
-        // workflow[to].dict[topid] = frompid;
     }
     return workflow;
 }
