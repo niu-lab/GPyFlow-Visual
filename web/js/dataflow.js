@@ -16,22 +16,17 @@ function init() {
             }
         );
 
-
-    myDiagram.addDiagramListener("SelectionDeleted", function (e) {
-        e.subject.each(function (p) {
-            var config = p.part.data.config;
-            removeMacros(config.commandLine);
-            // console.log(stepName);
-            // console.log(p.part.data.config);
-        })
-    });
-
-
     myDiagram.addDiagramListener("SelectionDeleted", function (e) {
         e.subject.each(function (p) {
             var stepName = p.part.data.key;
-            console.log(stepName);
+            if (stepName === undefined) {
+                return
+            }
+            var config = p.part.data.config;
+            removeMacros(config.commandLine);
+            console.log("remove" + "" + stepName);
             myDiagram.nodeTemplateMap.remove(stepName);
+
         })
     });
 
@@ -283,6 +278,7 @@ function removeMacros(commandLine) {
         if (m) {
             var index = findMacro(m[1]);
             if (index >= 0) {
+                console.log("remove macro " + m[1]);
                 macros.splice(index, 1);
             }
         }
