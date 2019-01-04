@@ -147,18 +147,19 @@
                     <img width="300" height="200" src="img/1.png"/>
                 </div>
                 <p>
-                    New Step to add a new step in workflow<br>
-                    Macros to show macros in workflow<br>
-                    Clear to clear canvas and macros<br>
+                    New Step: add a new step in workflow<br>
+                    Macros: show all macros in workflow<br>
+                    Layout: change the direction of flow graph<br>
+                    Clear: clear canvas<br>
                 </p>
                 <h4>2.Enter Step Name and Command Lines</h4>
                 <div class="text-center">
                     <img width="300" height="200" src="img/2.png"/>
                 </div>
                 <p>
-                    StepName can only be composed of lowercase letters, numbers and underscores.<br>
-                    Command lines to be run in this step are in CommandLine edit box which use <> to indicate the
-                    inputs of the step and [] to indicate the outputs.<br>
+                    (1) StepName can only be composed of lowercase letters, numbers and underscores.<br>
+                    (2) Command lines to be run in this step should be typed in CommandLine edit box which use #XXX# to indicate a macro, &#60;XXX&#62; to indicate the
+                    inputs of the step and [XXX] to indicate the outputs.<br>
                 </p>
                 <h4>3.Macros</h4>
                 <div class="text-center">
@@ -168,11 +169,11 @@
                     #MACRO# field is used to define a macro which can only be compose of uppercase letters, numbers and
                     underscores.
                 </p>
-                <h4>4.Export/Inport</h4>
+                <h4>4.Export/Import</h4>
                 <p>
-                    Export: save the edited workflow to a JSON file and submit it to GPyFlow to
+                    Export: save the edited workflow to a JSON file and submit it to GPyFlow-CLI to
                     run.<br>
-                    Import: import the JSON file to redraw a workflow.<br>
+                    Import: import the JSON file to render a workflow.<br>
                 </p>
             </div>
             <div class="modal-footer">
