@@ -24,7 +24,7 @@ function init() {
             }
             var config = p.part.data.config;
             removeMacros(config.commandLine);
-            console.log("remove" + "" + stepName);
+            console.log("remove" + ":" + stepName);
             myDiagram.nodeTemplateMap.remove(stepName);
 
         })
@@ -278,7 +278,7 @@ function removeMacros(commandLine) {
         if (m) {
             var index = findMacro(m[1]);
             if (index >= 0) {
-                console.log("remove macro " + m[1]);
+                console.log("remove macro:" + m[1]);
                 macros.splice(index, 1);
             }
         }
@@ -292,6 +292,7 @@ function extractMacros(text) {
         m = re.exec(text);
         if (m) {
             if (findMacro(m[1]) < 0) {
+                console.log("add macro:" + m[1]);
                 macros.push(m[1]);
             }
         }
@@ -310,7 +311,7 @@ function editStep(e, obj) {
     $('#step-command').val(config.commandLine);
     $('#edit').modal('show');
     current = config.stepName;
-    console.log(current);
+    console.log("current:" + current);
 }
 
 function isCurrentAndUpdateSave(stepName, commandLine) {
@@ -353,18 +354,26 @@ function update(stepName, commandLine) {
     }
     var key = "Step" + "-" + current;
     var isModify = isCurrentAndUpdateSave(stepName, commandLine);
-    console.log(isModify);
+    console.log("isCurrentAndUpdateSave：" + isModify);
     // 如果接口改变，删除template，删除node，重新插入
     if (isModify) {
-        myDiagram.nodeTemplateMap.remove(key);
         var node = myDiagram.findNodeForKey(key);
+        var nodeData = myDiagram.model.findNodeDataForKey(key);
+        var config = nodeData.config;
+        removeMacros(config.commandLine);
         myDiagram.startTransaction("delete node");
         myDiagram.remove(node);
         myDiagram.commitTransaction("delete node");
+        myDiagram.nodeTemplateMap.remove(key);
         insert(stepName, commandLine);
     } else {
         // 只改变nodeData 重新提取宏
         var nodeData = myDiagram.model.findNodeDataForKey(key);
+        var config = nodeData.config;
+        // 删除旧宏
+        removeMacros(config.commandLine);
+        // 新增宏
+        extractMacros(commandLine);
         myDiagram.startTransaction("delete node data");
         myDiagram.model.removeNodeData(nodeData);
         myDiagram.commitTransaction("delete node data");
@@ -372,7 +381,6 @@ function update(stepName, commandLine) {
         myDiagram.startTransaction("change node data");
         myDiagram.model.addNodeData(nodeData);
         myDiagram.commitTransaction("chage node data");
-        extractMacros(commandLine);
     }
 }
 
